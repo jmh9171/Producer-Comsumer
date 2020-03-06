@@ -40,7 +40,8 @@ public class Consumer extends Thread {
 			}
 		}
 	}
-	
+	//This part is just for testing purposes during the process of development.
+	//I used this to check for race conditions.
 	public void makeSound() throws LineUnavailableException {
 		System.out.println("Make sound");
 	    byte[] buf = new byte[2];
