@@ -1,56 +1,45 @@
 package queueLock;
 
-import demo.BoundedBuffer;
+import queueLock.BoundedBuffer;
 
 public class QueueLockProducer extends Thread {
-	private BoundedBuffer<Double> buffer;
+	private BoundedBuffer<Integer> buffer;
+	private Thread t;
+	private int x = 1;
 
-	public QueueLockProducer(BoundedBuffer<Double> buffer) {
+	public QueueLockProducer(BoundedBuffer<Integer> buffer, String name) {
 		this.buffer = buffer;
+		this.setName(name);
 	}
 
 	public void run() {
-		while (true) {
-			long x = (long) (Math.random() * (300 - 200 + 10) + 10);
-
+		System.out.println("Producer " + this.getName() + "Running!");
+		while (true) { // run forever
 			try {
-				// Thread.sleep(x);
-				// buffer.lock(); // Acquire lock for initial busy-wait check.
-				while (buffer.isFull()) { // Busy-wait until the queue is non-full.
-					// buffer.release();
-					System.out.println("Producer: Buffer full");
-					buffer.enqueueFull(this);
-					System.out.println("Producer: Sleeping");
-					this.join();
-					// buffer.lock();
+				while (buffer.isFull()) { // while the bounded buffer is full
+					buffer.enqueueFull(this);// queue this thread in the buffers producer queue
+					if ((t = buffer.dequeueEmpty()) != null) {// try to dequeue the consumer queue, it it comes back
+																// null then there was nothing there
+						t.interrupt();// interrupt the consumer thread
+					}
+					this.join();// then sleep on itself forever waiting for an interrupt
 				}
+			} catch (InterruptedException e) {// this is said interrupt
+			} finally {// need finally block so it runs every time even when the buffer is not full.
+				if ((t = buffer.dequeueEmpty()) != null) {// try to dequeue the consumer queue, it it comes back null
+															// then there was nothing there
+					t.interrupt();// interrupt the consumer thread
+				}
+				sendData(x++ % 10);// send the data
 
-			} catch (InterruptedException e) {
-				System.out.println("Producer: awake");
-				
-				sendData();
-				// buffer.release();
 			}
-			if (!buffer.isFull()) {
-				sendData();
-			}
-			
-		}
 
-	}
-	
-	public void sendData() {
-		send((Double) (Math.random() * 5));
-		System.out.println("Producer: Data sent");
-		// buffer.notifyLock();
-		Thread t;
-		if ((t = buffer.dequeueEmpty()) != null) {
-			System.out.println("Producer: Interupting Consumer");
-			t.interrupt();
 		}
 	}
 
-	public void send(Double double1) {
-		buffer.enqueue(double1);
+	// method to send data across to the buffer.
+	public void sendData(Integer temp) {
+		System.out.println("Producer " + this.getName() + ": Sent " + temp);
+		buffer.enqueue(temp);
 	}
 }
